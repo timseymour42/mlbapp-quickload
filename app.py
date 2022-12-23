@@ -309,6 +309,12 @@ def clean_player_data(hit_df, pitch_df):
     hit_df['TB'] = hit_df['SLG'] * hit_df['AB']
     return hit_df, pitch_df
 
+# scale WAR, BsR, Def
+def scale_stat(df, stats):
+    for stat in stats:
+        df[stat] = (162 / df['GS']) * df[stat]
+    return df
+
 def refresh_data():
     '''
     This section will be replaced to read from github csv for deployment purposes
@@ -335,6 +341,7 @@ def refresh_data():
     X, y, scales = clean_game_data(sql_game_data)
     ui_hit_df, ui_pitch_df = clean_player_data(sql_hitter_data, sql_pitcher_data)
     team_history = clean_team_data(sql_team_data)
+    team_history = scale_stat(team_history, ['BsR', 'WAR_y', 'Def'])
     team_history = team_history[['Team', 'Season', 'wRC+', 'HR/9', 'BsR', 'WAR_y', 'Def', 'SLG', 'W']]
     team_history['Season'] = team_history['Season'].apply(int)
     team_history = team_history.sort_values(by='Season', ascending=False).round(decimals=3)
