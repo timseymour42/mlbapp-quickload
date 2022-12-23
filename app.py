@@ -358,7 +358,7 @@ team_history, ui_hit_df, ui_pitch_df, X, y, scales, hit_sel, pit_sel, curr_year,
 ui_hit_df = ui_hit_df.drop(columns=['index', 'hitter_id'])
 ui_pitch_df = ui_pitch_df.drop(columns=['index', 'pitcher_id'])
 ui_hit_df = ui_hit_df[ui_hit_df.Season >= 2019]
-ui_pitch_df = ui_hit_df[ui_pitch_df.Season >= 2019]
+ui_pitch_df = ui_pitch_df[ui_pitch_df.Season >= 2019]
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 #server for render
