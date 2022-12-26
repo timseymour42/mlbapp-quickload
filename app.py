@@ -229,11 +229,8 @@ def wins_for_team(lineup, rotation, model='standard'):
         stats[stat] = (stats[stat] - scales.loc[stat]['Mean']) / scales.loc[stat]['Unit Variance']
     if (type(model) == str):
         logReg = LogisticRegression().fit(X, y)
-        adaBoost = AdaBoostClassifier(learning_rate = .3, n_estimators = 30).fit(X, y)
-        wins = logReg.predict_proba([[stats['wRC+'], stats['HR/9'], stats['BsR'], stats['WAR'], stats['Def'], stats['SLG']]])[0][1] * 2
-        wins += adaBoost.predict_proba([[stats['wRC+'], stats['HR/9'], stats['BsR'], stats['WAR'], stats['Def'], stats['SLG']]])[0][1]
-        wins /= 3
-        wins *= 162
+        wins = logReg.predict_proba([[stats['wRC+'], stats['HR/9'], stats['BsR'], stats['WAR'], stats['Def'], stats['SLG']]])[0][1] * 162
+        wins = linear_win_function.predict(np.array(wins).reshape(-1, 1))[0]
         return wins, reg_stats
     else:
         return model.predict_proba([[stats['wRC+'], stats['HR/9'], stats['BsR'], stats['WAR'], stats['Def'], stats['SLG']]])[0][1] * 162, reg_stats
@@ -361,11 +358,35 @@ def refresh_data():
     ui_pitch_df = ui_pitch_df.round(decimals=3).sort_values(by=['Season', 'WAR'], ascending=False)
     return team_history, ui_hit_df, ui_pitch_df, X, y, scales, hit_sel, pit_sel, curr_year, first_year, games, innings
 
+def linear_function(team_history, X, y):
+    # applying the function to Season to make Season numerical
+
+    team_history['Season'] = team_history['Season'].apply(string_to_num)
+    wins_tm = team_history[team_history.Season > 2014]['W'].reset_index(drop=True)
+    team_history_lr = team_history[['Team', 'Season', 'wRC+', 'HR/9', 'BsR', 'WAR_y', 'Def', 'SLG']]
+    team_history_lr['BsR'] = team_history_lr['BsR'] / 162
+    team_history_lr['WAR_y'] = team_history_lr['WAR_y'] / 162
+    team_history_lr['Def'] = team_history_lr['Def'] / 162
+    #Renaming for agreement with scales dataframe
+    team_history_lr.rename(columns = {'WAR_y': 'WAR'}, inplace = True)
+    metrics_ = ['wRC+', 'HR/9', 'BsR', 'WAR', 'Def', 'SLG']
+    for stat in metrics_:
+        team_history_lr[stat] = (team_history_lr[stat] - scales.loc[stat]['Mean']) / scales.loc[stat]['Unit Variance']
+    #Changing WAR back for agreement with model
+    team_history_lr.rename(columns = {'WAR': 'WAR_y'}, inplace = True)
+    team_history_lr = team_history_lr[team_history_lr.Season > 2014]
+    model = LogisticRegression().fit(X, y)
+    pred = model.predict_proba(team_history_lr.drop(columns=['Team', 'Season'])) * 162
+    pred = pred[:, 1]
+    linear_win_function = LinearRegression().fit(np.array(pred).reshape(-1, 1), wins_tm)
+    return linear_win_function
+
 team_history, ui_hit_df, ui_pitch_df, X, y, scales, hit_sel, pit_sel, curr_year, first_year, games, innings = refresh_data()
 ui_hit_df = ui_hit_df.drop(columns=['index', 'hitter_id'])
 ui_pitch_df = ui_pitch_df.drop(columns=['index', 'pitcher_id'])
 ui_hit_df = ui_hit_df[ui_hit_df.Season >= 2019]
 ui_pitch_df = ui_pitch_df[ui_pitch_df.Season >= 2019]
+linear_win_function = linear_function(team_history, X, y)
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.LUX])
 #server for render
