@@ -256,7 +256,7 @@ def clean_game_data(all_stats):
     X = X[['wRC+', 'HR/9', 'BsR', 'WAR_y', 'Def', 'SLG']]
     cols = X.columns
     y = all_stats['W']
-    #Scaling each column to be 
+    #Scaling each column
     scaler = StandardScaler()
     scaler.fit(X)
     X = scaler.transform(X)
